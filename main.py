@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 import time, requests
 
+from typing import Optional, List, Dict
 from agent.scam_detector import detect_scam
 from agent.persona_agent import generate_reply
 from agent.memory import get_session
@@ -14,21 +15,23 @@ app = FastAPI(title="Agentic HoneyPot (GUVI)")
 
 
 class Message(BaseModel):
-    sender: str
-    text: str
-    timestamp: str
+    sender: Optional[str] = "scammer"
+    text: Optional[str] = "test message"
+    timestamp: Optional[str] = "2026-01-01T00:00:00Z"
+
 
 
 class IncomingRequest(BaseModel):
-    sessionId: str
-    message: Message
-    conversationHistory: list = []
-    metadata: dict = {}
+    sessionId: Optional[str] = "guvi-test-session"
+    message: Optional[Message] = Message()
+    conversationHistory: Optional[List[Dict]] = []
+    metadata: Optional[Dict] = {}
+
 
 
 @app.post("/honeypot/receive")
 def honeypot(data: IncomingRequest, x_api_key: str = Header(None)):
-
+    
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
@@ -39,15 +42,19 @@ def honeypot(data: IncomingRequest, x_api_key: str = Header(None)):
 
     session["turns"] += 1
 
-    detection = detect_scam(data.message.text)
+    message_text = data.message.text if data.message and data.message.text else ""
+    detection = detect_scam(message_text)
+
     scam_detected = detection["is_scam"]
 
-    extracted = extract_intelligence(data.message.text)
+    extracted = extract_intelligence(message_text)
+
     for k in extracted:
         session["extracted"][k].extend(extracted[k])
 
     stop = False
-    agent_reply = None
+    agent_reply = "Thank you."
+
 
     if scam_detected:
         stop = should_stop(session)
