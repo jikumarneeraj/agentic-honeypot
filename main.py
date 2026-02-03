@@ -11,55 +11,43 @@ from config.settings import API_KEY, GUVI_CALLBACK_URL
 
 app = FastAPI(title="Agentic HoneyPot (GUVI)")
 
-@app.get("/honeypot/receive")
-def honeypot_get():
-    return {
-        "status": "success",
-        "scamDetected": False,
-        "agentReply": "Thank you.",
-        "engagementMetrics": {
-            "engagementDurationSeconds": 0,
-            "totalMessagesExchanged": 0
-        },
-        "extractedIntelligence": {
-            "bankAccounts": [],
-            "upiIds": [],
-            "phishingLinks": [],
-            "phoneNumbers": [],
-            "suspiciousKeywords": []
-        },
-        "agentNotes": "GUVI endpoint tester validation response"
-    }
 
-
-
-@app.post("/honeypot/receive")
+@app.api_route("/honeypot/receive", methods=["GET", "POST"])
 async def honeypot(
     request: Request,
     x_api_key: str = Header(None)
 ):
-    # ------------------------
-    # 1️⃣ API KEY AUTH
-    # ------------------------
+    # -------------------------------------------------
+    # 1️⃣ API KEY AUTH (MANDATORY)
+    # -------------------------------------------------
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
-    # ------------------------
-    # 2️⃣ SAFE BODY PARSING (GUVI COMPATIBLE)
-    # ------------------------
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
+    # -------------------------------------------------
+    # 2️⃣ SAFE BODY PARSING (GUVI TESTER SAFE)
+    # -------------------------------------------------
+    body = {}
 
+    if request.method == "POST":
+        try:
+            parsed = await request.json()
+            if isinstance(parsed, dict):
+                body = parsed
+        except Exception:
+            body = {}
+
+    # -------------------------------------------------
+    # 3️⃣ SAFE DEFAULT VALUES
+    # -------------------------------------------------
     session_id = body.get("sessionId", "guvi-test-session")
 
-    message_obj = body.get("message", {})
-    message_text = message_obj.get("text", "")
+    message_text = ""
+    if isinstance(body.get("message"), dict):
+        message_text = body["message"].get("text", "")
 
-    # ------------------------
-    # 3️⃣ SESSION MANAGEMENT
-    # ------------------------
+    # -------------------------------------------------
+    # 4️⃣ SESSION MANAGEMENT
+    # -------------------------------------------------
     session = get_session(session_id)
 
     if not session["start_time"]:
@@ -67,22 +55,22 @@ async def honeypot(
 
     session["turns"] += 1
 
-    # ------------------------
-    # 4️⃣ SCAM DETECTION
-    # ------------------------
+    # -------------------------------------------------
+    # 5️⃣ SCAM DETECTION
+    # -------------------------------------------------
     detection = detect_scam(message_text)
     scam_detected = detection.get("is_scam", False)
 
-    # ------------------------
-    # 5️⃣ INTELLIGENCE EXTRACTION
-    # ------------------------
+    # -------------------------------------------------
+    # 6️⃣ INTELLIGENCE EXTRACTION
+    # -------------------------------------------------
     extracted = extract_intelligence(message_text)
     for k in extracted:
         session["extracted"][k].extend(extracted[k])
 
-    # ------------------------
-    # 6️⃣ AGENT LOGIC
-    # ------------------------
+    # -------------------------------------------------
+    # 7️⃣ AGENTIC ENGAGEMENT
+    # -------------------------------------------------
     agent_reply = "Thank you."
     stop = False
 
@@ -104,14 +92,14 @@ async def honeypot(
         else:
             session["completed"] = True
 
-    # ------------------------
-    # 7️⃣ METRICS
-    # ------------------------
+    # -------------------------------------------------
+    # 8️⃣ METRICS
+    # -------------------------------------------------
     duration = int(time.time() - session["start_time"])
 
-    # ------------------------
-    # 8️⃣ GUVI FINAL CALLBACK (MANDATORY)
-    # ------------------------
+    # -------------------------------------------------
+    # 9️⃣ GUVI FINAL CALLBACK (ONLY WHEN STOPPED)
+    # -------------------------------------------------
     if stop:
         payload = {
             "sessionId": session_id,
@@ -130,9 +118,9 @@ async def honeypot(
         except Exception:
             pass
 
-    # ------------------------
-    # 9️⃣ RESPONSE (GUVI EXPECTED FORMAT)
-    # ------------------------
+    # -------------------------------------------------
+    # 🔟 FINAL RESPONSE (GUVI VALID)
+    # -------------------------------------------------
     return {
         "status": "success",
         "scamDetected": scam_detected,
@@ -142,5 +130,5 @@ async def honeypot(
             "totalMessagesExchanged": session["turns"]
         },
         "extractedIntelligence": session["extracted"],
-        "agentNotes": "Scammer used urgency and redirection tactics"
+        "agentNotes": "GUVI endpoint tester validation response"
     }
