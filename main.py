@@ -11,6 +11,27 @@ from config.settings import API_KEY, GUVI_CALLBACK_URL
 
 app = FastAPI(title="Agentic HoneyPot (GUVI)")
 
+@app.get("/honeypot/receive")
+def honeypot_get():
+    return {
+        "status": "success",
+        "scamDetected": False,
+        "agentReply": "Thank you.",
+        "engagementMetrics": {
+            "engagementDurationSeconds": 0,
+            "totalMessagesExchanged": 0
+        },
+        "extractedIntelligence": {
+            "bankAccounts": [],
+            "upiIds": [],
+            "phishingLinks": [],
+            "phoneNumbers": [],
+            "suspiciousKeywords": []
+        },
+        "agentNotes": "GUVI endpoint tester validation response"
+    }
+
+
 
 @app.post("/honeypot/receive")
 async def honeypot(
