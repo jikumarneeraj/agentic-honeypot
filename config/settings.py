@@ -1,7 +1,9 @@
 import os
 
-API_KEY = "YOUR_SECRET_API_KEY"
+# 🔐 Honeypot API Key (from environment)
+API_KEY = os.getenv("API_KEY")
 
+# 🤖 LLM configuration (optional)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
