@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Body
 from pydantic import BaseModel
 from datetime import datetime
 import time, requests
@@ -24,13 +24,18 @@ class Message(BaseModel):
 class IncomingRequest(BaseModel):
     sessionId: Optional[str] = "guvi-test-session"
     message: Optional[Message] = Message()
-    conversationHistory: Optional[List[Dict]] = []
-    metadata: Optional[Dict] = {}
-
+    conversationHistory: Optional[list] = []
+    metadata: Optional[dict] = {}
+    
 
 
 @app.post("/honeypot/receive")
-def honeypot(data: IncomingRequest, x_api_key: str = Header(None)):
+def honeypot(
+    data: IncomingRequest = Body(default={}),
+    x_api_key: str = Header(None)
+):
+    if data is None:
+        data = IncomingRequest()
     
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
